@@ -391,6 +391,7 @@ message GetMachineStatusResponse {
   ConfigStatus config = 2;
   State state = 3;
   repeated JobStatus job_statuses = 4;
+  repeated ModuleStatus modules = 5;
 }
 
 message JobStatus {
@@ -433,6 +434,45 @@ message ResourceStatus {
 
   // infomation about resource orgID, locationID and partID
   optional GetCloudMetadataResponse cloud_metadata = 6;
+}
+
+message ModuleStatus {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    // the module is configured but viam-server has not yet attempted to start it
+    // (for example, while a required package is still downloading).
+    STATE_PENDING = 1;
+    // the module's first-run setup script is executing.
+    STATE_FIRST_RUN = 2;
+    // the module's process has been spawned and viam-server is waiting for it
+    // to send a Ready response and register its resource models.
+    STATE_STARTING = 3;
+    // the module is running, has acknowledged Ready, and has registered its models.
+    STATE_READY = 4;
+    // the module failed to start, exited unexpectedly, or is being restarted after a crash.
+    STATE_UNHEALTHY = 5;
+    // the module is being removed from the machine.
+    STATE_REMOVING = 6;
+  }
+
+  // module name.
+  string module_name = 1;
+
+  // current state.
+  State state = 2;
+
+  // state transition timestamp.
+  google.protobuf.Timestamp last_updated = 3;
+
+  // error details for a module. This is guaranteed to be empty if the module is
+  // ready and non-empty if the module is unhealthy.
+  string error = 4;
+
+  // number of consecutive failures observed for this module in the current
+  // failure episode (initial startup failures plus crash/restart attempts).
+  // Resets to zero when the module successfully starts or is reconfigured.
+  // Useful for detecting modules stuck in a restart loop.
+  int32 consecutive_failures = 5;
 }
 
 message ConfigStatus {
